@@ -13,12 +13,12 @@ const App = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [page, setPage] = useState(1);
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState(null);
-  const [notify, setNotify] = useState(false);
-  const [message, setMessage] = useState('');
-  const [showPopup, setShowPopup] = useState(false);
+  const [notify, setNotify] = useState({ status: false, message: '' });
+  const [showPopup, setShowPopup] = useState({
+    status: false,
+    targetImage: null,
+  });
   const [showButton, setShowButton] = useState(false);
-  const [targetImage, setTargetImage] = useState(null);
 
   useEffect(() => {
     setPage(1);
@@ -29,13 +29,12 @@ const App = () => {
     if (searchQuery === '') {
       setImages([]);
       setShowButton(false);
-      setMessage('Please input search request');
-      setNotify(true);
+      setNotify({ status: true, message: 'Please input search request' });
       return;
     }
 
     setIsLoading(true);
-    setNotify(false);
+    setNotify({ status: false, message: '' });
 
     fetchImage(searchQuery, page)
       .then(data => {
@@ -52,50 +51,47 @@ const App = () => {
         checkButtonAndNotify(data.totalHits, images.length + data.hits.length);
         setPage(prevState => prevState + 1);
       })
-      .catch(error => setError(error))
+      .catch(error =>
+        setNotify({
+          status: true,
+          message: `Something wrong: ${error.message}`,
+        }),
+      )
       .finally(() => setIsLoading(false));
   }
 
   function checkButtonAndNotify(total, current) {
-    if (total > current) {
-      setShowButton(true);
-    } else {
-      setShowButton(false);
-    }
+    setShowButton(total > current ? true : false);
 
-    if (!total) {
-      setMessage('Nothing was found. Try again.');
-      setNotify(true);
-    } else {
-      setNotify(false);
-    }
+    setNotify(
+      !total
+        ? { status: true, message: 'Nothing was found. Try again.' }
+        : { status: false, message: '' },
+    );
   }
 
   const toggleModal = ({ status, src, alt }) => {
-    if (status) {
-      setTargetImage({ src, alt });
-      setShowPopup(true);
-    } else {
-      setShowPopup(false);
-      setTargetImage(null);
-    }
+    setShowPopup(
+      status
+        ? { status: true, targetImage: { src, alt } }
+        : { status: false, targetImage: null },
+    );
   };
 
   return (
     <div className={s.App}>
       <Searchbar onSubmit={setSearchQuery} />
-      {error && <Notify message={`Something wrong: ${error.message}`} />}
+      {notify.status && <Notify message={notify.message} />}
       {isLoading && (
         <Loader type="Circles" color="#00BFFF" height={80} width={80} />
       )}
       {images.length > 0 && (
         <ImageGallery images={images} toggleModal={toggleModal} />
       )}
-      {notify && <Notify message={message} />}
-      {showPopup && (
+      {showPopup.status && (
         <Modal
-          src={targetImage.src}
-          alt={targetImage.alt}
+          src={showPopup.targetImage.src}
+          alt={showPopup.targetImage.alt}
           toggleModal={toggleModal}
         />
       )}
